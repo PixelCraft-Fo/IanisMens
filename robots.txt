@@ -1,0 +1,6 @@
+# robots.txt — IANIS men's
+# Tot site-ul poate fi accesat de motoarele de căutare (inclusiv CSS, JS și imagini).
+User-agent: *
+Allow: /
+
+Sitemap: https://pixelcraft-fo.github.io/IanisMens/sitemap.xml
