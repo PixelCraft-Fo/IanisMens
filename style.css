@@ -78,6 +78,10 @@ button {
   outline-offset: 3px;
 }
 
+[hidden] {
+  display: none !important;
+}
+
 .sr-only {
   position: absolute;
   width: 1px;
@@ -1184,6 +1188,9 @@ button {
 }
 
 .filter-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
   font-family: var(--font-title);
   font-weight: 600;
   text-transform: uppercase;
@@ -1206,14 +1213,50 @@ button {
   color: var(--negru);
 }
 
-.swatch {
-  display: inline-block;
-  width: 10px;
-  height: 10px;
-  border-radius: 50%;
-  margin-right: 8px;
-  vertical-align: 0;
-  border: 1px solid rgba(0, 0, 0, 0.15);
+/* Ancore invizibile: #costume, #sacouri, #jeans … duc toate la galerie */
+.anchor-target {
+  display: block;
+  height: 0;
+  overflow: hidden;
+}
+
+/* Fiecare categorie își păstrează forma pozelor (pantofii sunt panoramici, blugii aproape pătrați) */
+.works-grid[data-raport="portret"] .gallery-item { aspect-ratio: 3 / 4; }
+.works-grid[data-raport="patrat"] .gallery-item { aspect-ratio: 1 / 1; }
+.works-grid[data-raport="peisaj"] .gallery-item { aspect-ratio: 4 / 3; }
+
+.category-descrieri {
+  max-width: 760px;
+  margin: 0 auto 26px;
+  text-align: center;
+}
+
+.category-descriere h3 {
+  font-family: var(--font-title);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  font-size: 1rem;
+  margin-bottom: 10px;
+}
+
+.category-descriere p {
+  color: var(--gri);
+}
+
+.gallery-empty {
+  max-width: 620px;
+  margin: 0 auto;
+  text-align: center;
+  background: var(--alb);
+  border-radius: var(--radius);
+  padding: 40px 30px;
+  box-shadow: var(--umbra-card);
+}
+
+.gallery-empty p {
+  color: var(--gri);
+  margin-bottom: 24px;
 }
 
 .gallery-count {

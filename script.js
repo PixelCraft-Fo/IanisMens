@@ -200,31 +200,143 @@
     counters.forEach(function (c) { counterObserver.observe(c); });
   }
 
-  /* ----- 6. Filtre galerie (după culoare) ----- */
-  var filterBtns = document.querySelectorAll('.filter-btn');
-  var workItems = document.querySelectorAll('.works-grid .gallery-item');
-  var countEl = document.querySelector('.gallery-count');
+  /* ----- 6. Galeria pe categorii (datele vin din produse.js) ----- */
+  var grid = document.querySelector('.works-grid');
 
-  function updateCount() {
-    if (!countEl) return;
-    var visible = 0;
-    workItems.forEach(function (item) { if (!item.classList.contains('hide')) visible++; });
-    countEl.textContent = visible === 1 ? '1 fotografie' : visible + ' fotografii';
-  }
+  if (grid && window.CATEGORII && window.PRODUSE) {
+    var filterBtns = document.querySelectorAll('.filter-btn');
+    var chips = document.querySelectorAll('[data-chip]');
+    var descrieri = document.querySelectorAll('[data-descriere]');
+    var golEl = document.querySelector('.gallery-empty');
+    var countEl = document.querySelector('.gallery-count');
+    var categorieCurenta = null;
 
-  filterBtns.forEach(function (btn) {
-    btn.addEventListener('click', function () {
-      filterBtns.forEach(function (b) { b.setAttribute('aria-pressed', 'false'); });
-      btn.setAttribute('aria-pressed', 'true');
-      var filter = btn.getAttribute('data-filter');
-      workItems.forEach(function (item) {
-        var show = filter === 'toate' || item.getAttribute('data-category') === filter;
-        item.classList.toggle('hide', !show);
+    function pozeActive(id) {
+      return (window.PRODUSE[id] || []).filter(function (slot) { return slot.activ; });
+    }
+
+    function categoriaDupaId(id) {
+      for (var i = 0; i < window.CATEGORII.length; i++) {
+        if (window.CATEGORII[i].id === id) return window.CATEGORII[i];
+      }
+      return null;
+    }
+
+    function textNumar(n) {
+      if (n === 1) return '1 fotografie';
+      return n + (n < 20 ? ' fotografii' : ' de fotografii');
+    }
+
+    function construiesteGrila(cat, sloturi) {
+      grid.setAttribute('data-raport', cat.raport);
+      grid.textContent = '';
+      var fragment = document.createDocumentFragment();
+
+      sloturi.forEach(function (slot) {
+        var fisier = 'imagini/' + cat.prefix + slot.n + '.png';
+
+        var link = document.createElement('a');
+        link.className = 'gallery-item';
+        link.href = fisier;
+        link.setAttribute('data-lightbox', '');
+
+        var poza = document.createElement('img');
+        poza.src = fisier;
+        poza.alt = slot.alt || cat.altImplicit;
+        poza.width = cat.w;
+        poza.height = cat.h;
+        poza.loading = 'lazy';
+        poza.decoding = 'async';
+
+        var lupa = document.createElement('span');
+        lupa.className = 'zoom';
+        lupa.setAttribute('aria-hidden', 'true');
+        lupa.innerHTML = '<svg class="icon"><use href="#i-zoom"></use></svg>';
+
+        link.appendChild(poza);
+        link.appendChild(lupa);
+        fragment.appendChild(link);
       });
-      updateCount();
+
+      grid.appendChild(fragment);
+    }
+
+    function saiLaGalerie(lin) {
+      var sectiune = document.getElementById('galerie');
+      if (!sectiune) return;
+      try {
+        sectiune.scrollIntoView({ block: 'start', behavior: lin ? 'smooth' : 'instant' });
+      } catch (err) {
+        sectiune.scrollIntoView(true);
+      }
+    }
+
+    function selecteaza(id, actualizeazaHash, deruleaza) {
+      var cat = categoriaDupaId(id);
+      if (!cat) return;
+      if (cat.id === categorieCurenta) {
+        if (deruleaza) saiLaGalerie(true);
+        return;
+      }
+      categorieCurenta = cat.id;
+
+      filterBtns.forEach(function (btn) {
+        btn.setAttribute('aria-pressed', String(btn.getAttribute('data-categorie') === cat.id));
+      });
+      descrieri.forEach(function (el) {
+        el.hidden = el.getAttribute('data-descriere') !== cat.id;
+      });
+
+      var sloturi = pozeActive(cat.id);
+      construiesteGrila(cat, sloturi);
+      grid.hidden = sloturi.length === 0;
+      if (golEl) golEl.hidden = sloturi.length > 0;
+      if (countEl) countEl.textContent = sloturi.length ? textNumar(sloturi.length) : '';
+
+      if (actualizeazaHash && window.history && history.replaceState) {
+        history.replaceState(null, '', '#' + cat.id);
+      }
+      if (deruleaza) saiLaGalerie(true);
+    }
+
+    // Categoriile fără nicio poză activă își ascund filtrul și scurtătura din meniu.
+    window.CATEGORII.forEach(function (cat) {
+      var are = pozeActive(cat.id).length > 0;
+      filterBtns.forEach(function (btn) {
+        if (btn.getAttribute('data-categorie') === cat.id) btn.hidden = !are;
+      });
+      chips.forEach(function (chip) {
+        if (chip.getAttribute('data-chip') === cat.id) chip.hidden = !are;
+      });
     });
-  });
-  updateCount();
+
+    filterBtns.forEach(function (btn) {
+      btn.addEventListener('click', function () {
+        selecteaza(btn.getAttribute('data-categorie'), true);
+      });
+    });
+
+    function dinHash() {
+      var id = (location.hash || '').replace('#', '');
+      if (categoriaDupaId(id)) return id;
+      // prima categorie cu poze, altfel prima din listă
+      for (var i = 0; i < window.CATEGORII.length; i++) {
+        if (pozeActive(window.CATEGORII[i].id).length) return window.CATEGORII[i].id;
+      }
+      return window.CATEGORII[0].id;
+    }
+
+    window.addEventListener('hashchange', function () { selecteaza(dinHash(), false, true); });
+
+    // La intrarea directă pe colectii.html#pantofi (link, Google, card de pe prima pagină)
+    // deschidem categoria cerută și sărim la galerie.
+    var hashInitial = (location.hash || '').replace('#', '');
+    selecteaza(dinHash(), false, false);
+    if (categoriaDupaId(hashInitial)) {
+      saiLaGalerie(false);
+      window.addEventListener('load', function () { saiLaGalerie(false); });
+    }
+  }
 
   /* ----- 7. Lightbox ----- */
   var lightbox = document.querySelector('.lightbox');
@@ -241,10 +353,7 @@
     var lastFocus = null;
 
     var visibleItems = function () {
-      return Array.prototype.filter.call(
-        document.querySelectorAll('[data-lightbox]'),
-        function (item) { return !item.classList.contains('hide'); }
-      );
+      return Array.prototype.slice.call(document.querySelectorAll('[data-lightbox]'));
     };
 
     var render = function () {
@@ -280,11 +389,12 @@
       render();
     };
 
-    document.querySelectorAll('[data-lightbox]').forEach(function (item) {
-      item.addEventListener('click', function (e) {
-        e.preventDefault();
-        openLb(item);
-      });
+    // Delegare: pozele din galerie sunt create dinamic, după categoria aleasă
+    document.addEventListener('click', function (e) {
+      var item = e.target.closest ? e.target.closest('[data-lightbox]') : null;
+      if (!item) return;
+      e.preventDefault();
+      openLb(item);
     });
 
     lbClose.addEventListener('click', closeLb);
